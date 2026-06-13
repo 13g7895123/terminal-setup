@@ -6,9 +6,18 @@
 
 set -euo pipefail
 
-POSH_BIN="/usr/local/bin/oh-my-posh"
 THEMES_DIR="$HOME/.poshthemes"
 TARGET_VERSION="${OMP_VERSION:-}"   # 可選：指定版本，空字串=最新
+
+# macOS 官方安裝腳本預設裝到 ~/.local/bin，Linux 裝到 /usr/local/bin
+_resolve_posh_bin() {
+  if   [ -x "$HOME/.local/bin/oh-my-posh" ]; then echo "$HOME/.local/bin/oh-my-posh"
+  elif [ -x "/usr/local/bin/oh-my-posh" ];   then echo "/usr/local/bin/oh-my-posh"
+  elif command -v oh-my-posh >/dev/null 2>&1; then command -v oh-my-posh
+  else echo "/usr/local/bin/oh-my-posh"   # 預設安裝目標
+  fi
+}
+POSH_BIN="$(_resolve_posh_bin)"
 
 log()  { printf '\033[36m[install]\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m[install]\033[0m %s\n' "$*"; }
@@ -42,7 +51,7 @@ install_oh_my_posh() {
   if [ -x "$POSH_BIN" ]; then
     local cur
     cur="$("$POSH_BIN" --version 2>/dev/null || echo unknown)"
-    log "oh-my-posh 已安裝 (版本 $cur)，略過。如需重裝請先 sudo rm $POSH_BIN"
+    log "oh-my-posh 已安裝於 $POSH_BIN (版本 $cur)，略過。如需重裝請先刪除該 binary"
     return 0
   fi
   log "安裝 oh-my-posh 到 $POSH_BIN"
@@ -76,9 +85,11 @@ install_themes() {
 main() {
   ensure_basics
   install_oh_my_posh
+  # 安裝後重新偵測（安裝腳本可能改變了路徑）
+  POSH_BIN="$(_resolve_posh_bin)"
   install_themes
-  log "完成。oh-my-posh 版本: $("$POSH_BIN" --version 2>/dev/null || echo unknown)"
-  log "下一步：執行 configure.sh 套用主題與寫入 ~/.bashrc"
+  log "完成。oh-my-posh 路徑: $POSH_BIN，版本: $("$POSH_BIN" --version 2>/dev/null || echo unknown)"
+  log "下一步：執行 configure.sh 套用主題"
 }
 
 main "$@"
